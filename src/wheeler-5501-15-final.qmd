@@ -1,0 +1,118 @@
+---
+title: "Analysis of Salary data by graduates from 706 universities in the United States"
+format: 
+  html:
+    embed-resources: true
+execute:
+  error: true
+---
+
+
+This program was written by Leroy Wheeler with guidance from Dr. Steve Simon on 2024-10-25. It is placed in the public domain.
+
+
+## Libraries
+
+```{r setup}
+#| message: false
+#| warning: false
+library(broom)
+library(tidyverse)
+```
+
+## Read data https://dasl.datadescription.com/datafile/earnings/
+
+```{r read-earnings}
+earnings <- read_tsv(
+  file="../data/earnings.txt",
+  col_types="ccnnnnnnnnc")
+names(earnings) <- tolower(names(earnings))
+glimpse(earnings)
+```
+
+
+## Descriptive statistics of graduate's annual salary
+```{r features-means 1}
+earnings |>
+  summarise(
+    earn_mn=mean(earn, na.rm=TRUE),
+    earn_sd=sd(earn, na.rm=TRUE),
+    earn_min=min(earn, na.rm=TRUE),
+    earn_max=max(earn, na.rm=TRUE),
+    n_missing=sum(is.na(earn)))
+```
+There is a pretty large range of values for graduate's salary with no missing values.
+
+## Descriptive statistics of price paid for degree
+```{r features-means 2}
+earnings |>
+  summarise(
+    price_mn=mean(price, na.rm=TRUE),
+    price_sd=sd(price, na.rm=TRUE),
+    price_min=min(price, na.rm=TRUE),
+    price_max=max(price, na.rm=TRUE),
+    n_missing=sum(is.na(price)))
+```
+
+There is a wide range of values for amount spent per year to attend college with no missing values.
+
+## Linear model:
+## [Salary earned] = β0 + β1 * [Price paid for degree]
+
+## Hypothesis: 
+##	H0: β1 = 0 →  No relationship between price of degree and salary earned 
+
+##	Ha: β1 ≠ 0 →  A relationship exists between price of degree and salary earned
+```{r plot 1}
+earnings|>
+	ggplot(aes(price, earn)) +
+	  geom_point() +
+	  xlab("Price of College Degree (USD)") +
+	  ylab("Salary After Graduation (USD)") +
+    geom_smooth(method="lm", se=FALSE) +
+    ggtitle("Scatter Plot of Salary vs College Price tag [Leroy Wheeler 2024-10-20]")
+```
+
+There appears to be a small positive linear relationship between price paid for college degree and the salary earned by college graduates.
+
+```{r linear-regression 1}
+m1 <- lm(earn~price, data=earnings)
+m1
+```
+The linear regression model predicts that for every additional dollar spent on the college degree, the graduates with that degree would expect to earn an additional 12 cents per year in salary.
+
+```{r anova 1}
+anova(m1)
+```
+
+
+```{r r-squared 1}
+glance(m1)$r.squared
+```
+With an R squared value of 0.08, we conclude that the relationship between price paid for college degree and the salary earned upon graduation is very weak.  The ANOVA table displays a large F value and a small p-value for our linear regression model, therefore we conclude that this weak relationship is likely true.
+
+
+
+```{r residual-scatterplot-1}
+m1 |>
+  ggplot(aes(price, .resid)) + 
+    geom_point() +
+	  ggtitle("Scatter of Residuals drawn by Leroy Wheeler on 2024-10-25") +
+	  xlab("Price of College Degree (USD)") +
+	  ylab("Residuals from m1") 
+```
+
+This scatterplot displays the residual variation according to college price. It looks like there is some non-linearity in the data towards the more expensive schools.
+
+```{r histogram-1}
+m1 |>
+  ggplot(aes(.resid)) +
+    geom_histogram(
+      binwidth=2000,
+      color="black",
+      fill="white") +
+	  ggtitle("Residual histogram drawn by Leroy Wheeler on 2024-10-25") +
+	  xlab("Residuals from m1")
+```
+A plot of the residuals demonstrates a little right skew in the residuals.  This linear model may be improved by a log transformation, however with our large sample size (n = 706), we should be able to safely ignore a little departure from normal distribution.
+

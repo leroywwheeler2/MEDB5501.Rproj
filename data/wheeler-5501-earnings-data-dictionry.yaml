@@ -1,0 +1,89 @@
+---
+data_dictionary: earnings.txt
+
+description: >
+  Data from 706 universities in the United States were collected which include:
+  SAT/ACT scores, price to attend university before/after financial aid/merit,
+  and university status public or private. Salary data were collected from graduates
+  from each university.
+
+format: 
+  txt: tab-delimited
+
+varnames: 
+  first row of data
+
+missing_value_code: 
+  NA
+
+additional_description:
+   http://new.time.com/money/best-colleges/rankings/best-colleges/
+
+download_url:
+  https://dasl.datadescription.com/datafile/earnings/
+
+source: >
+  DASL (The Data and Story Library), a repository for various
+  data sets useful for teaching.
+
+copyright: >
+  Unknown. You should be able to use this data for
+  individual educational purposes under the Fair Use
+  guidelines of U.S. copyright law.
+
+size:  
+  rows: 706
+  columns: 11
+
+vars:
+  school:
+    label: Name of the university
+    scale: nominal
+    
+  place:
+    label: Location of the university
+    scale: nominal
+
+  price:
+    label: Annual price of attendance
+    units: US dollars
+    scale: ratio
+
+  `price with aid`:
+    label: Annual price of attendance after financial aid
+    units: US dollars
+    scale: ratio
+    
+  pct.need:
+    label: Percentage of students who applied for financial aid
+    units: %
+    scale: ratio
+
+  `merit aid`:
+    label: Percentage of students who received merit based scholarships
+    units: %
+    scale: ratio
+
+  earn:
+    label: Salary earned by university graduates
+    units: US dollars
+    scale: ratio
+    
+  sat:
+    label: Average SAT scores of entering freshmen
+    units: NA
+    scale: interval
+
+  act:
+    label: Average ACT scores of entering freshmen
+    units: NA
+    scale: interval
+
+  public:
+    label: Status of university as public or private
+    values:
+	private: 0
+	public: 1
+    scale: nominal
+
+---

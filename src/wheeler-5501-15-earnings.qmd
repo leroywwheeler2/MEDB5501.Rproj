@@ -1,0 +1,267 @@
+---
+title: "Analysis of Salary data by graduates from 706 universities in the United States"
+format: 
+  html:
+    embed-resources: true
+execute:
+  error: true
+---
+
+
+This program was written by Leroy Wheeler with guidance from Dr. Steve Simon on 2024-10-25. It is placed in the public domain.
+
+
+## Libraries
+
+```{r setup}
+#| message: false
+#| warning: false
+library(broom)
+library(tidyverse)
+```
+
+## Read data https://dasl.datadescription.com/datafile/earnings/
+
+```{r read-earnings}
+earnings <- read_tsv(
+  file="../data/earnings.txt",
+  col_types="ccnnnnnnnnc")
+names(earnings) <- tolower(names(earnings))
+glimpse(earnings)
+```
+
+
+## Descriptive statistics of salary of graduates
+```{r features-means 1}
+earnings |>
+  summarise(
+    earn_mn=mean(earn, na.rm=TRUE),
+    earn_sd=sd(earn, na.rm=TRUE),
+    earn_min=min(earn, na.rm=TRUE),
+    earn_max=max(earn, na.rm=TRUE),
+    n_missing=sum(is.na(earn)))
+```
+## Descriptive statistics of price paid for degree
+```{r features-means 2}
+earnings |>
+  summarise(
+    price_mn=mean(price, na.rm=TRUE),
+    price_sd=sd(price, na.rm=TRUE),
+    price_min=min(price, na.rm=TRUE),
+    price_max=max(price, na.rm=TRUE),
+    n_missing=sum(is.na(price)))
+```
+
+
+## Hypothesis:
+
+##	H0: β1 = 0 →  No relationship between price of degree and salary earned 
+
+##	Ha: β1 ≠ 0 →  A relationship exists between price of degree and salary earned
+```{r plot 1}
+earnings|>
+	ggplot(aes(price, earn)) +
+	  geom_point() +
+	  xlab("Price of College Degree (USD)") +
+	  ylab("Salary After Graduation (USD)") +
+    geom_smooth(method="lm", se=FALSE) +
+    ggtitle("Scatter Plot of Salary vs College Price tag [Leroy Wheeler 2024-10-20]")
+```
+
+There appears to be a small positive linear relationship between price paid for college degree and the salary earned by college graduates.
+
+```{r linear-regression 1}
+m1 <- lm(earn~price, data=earnings)
+m1
+```
+The linear regression model predicts that for every additional dollar spent on the college degree, the graduates with that degree would expect to earn an additional 12 cents per year in salary.
+
+```{r anova 1}
+anova(m1)
+```
+
+
+```{r r-squared 1}
+glance(m1)$r.squared
+```
+With an R squared value of 0.08, we conclude that the relationship between price paid for college degree and the salary earned upon graduation is very weak.  The ANOVA table displays a large F value and a small p-value for our linear regression model, therefore we conclude that this weak relationship is likely true.
+
+
+
+```{r residual-scatterplot-1}
+m1 |>
+  ggplot(aes(price, .resid)) + 
+    geom_point() +
+	  ggtitle("Scatter of Residuals drawn by Leroy Wheeler on 2024-10-25") +
+	  xlab("Price of College Degree (USD)") +
+	  ylab("Residuals from m1") 
+```
+
+This scatterplot displays the residual variation according to college price. It looks like there is some non-linearity in the data towards the more expensive schools.
+
+```{r histogram-1}
+m1 |>
+  ggplot(aes(.resid)) +
+    geom_histogram(
+      binwidth=2000,
+      color="black",
+      fill="white") +
+	  ggtitle("Residual histogram drawn by Leroy Wheeler on 2024-10-25") +
+	  xlab("Residuals from m1")
+```
+A plot of the residuals demonstrates a little right skew in the residuals.  This linear model may be improved by a log transformation, however with our large sample size (n = 706), we should be able to safely ignore a little departure from normal distribution.
+
+
+```{r box plot-1}
+earnings |>
+  ggplot(aes(public, price)) +
+    geom_boxplot() +
+    ggtitle("Graph drawn by Leroy Wheeler on 2024-10-22") +
+    xlab("Public University") +
+    ylab("Price paid for college degree (USD)") +
+    coord_flip()
+```
+The box plots show more variation in the price data in the private university attendees when compared to the public university attendees.  We need some descriptive statistics to compare their standard deviations.
+
+
+## Descriptive statistics for price paid for college degree when distinguished by whether the graduates attended a private or public university
+
+```{r group-means-1}
+earnings |>
+  group_by(public) |>
+  summarize(
+    Price_of_degree_mn=mean(price),
+    Price_of_degree_sd=sd(price),
+    n=n())
+```
+
+
+
+
+```{r t-test 1}
+m2 <- t.test(
+  price ~ public, 
+  data=earnings,
+  alternative="two.sided",
+  var.equal=TRUE)
+m2
+```
+Compared to college graduates from public schools, private college graduates paid 27,800 USD more for their degree with a 95% CI lower of 26,493 USD and upper of 28,968 USD.
+
+
+
+## Box plots of earnings by University type to compare normality
+
+```{r box plot-2}
+earnings |>
+  ggplot(aes(public, earn)) +
+    geom_boxplot() +
+    ggtitle("Graph drawn by Leroy Wheeler on 2024-10-22") +
+    xlab("Public University") +
+    ylab("Salary after Graduation (USD)") +
+    coord_flip()
+```
+The box plots of the salary data in each of group appears normally distributed in both groups. 
+
+
+## Descriptive statistics for salary earned after graduation when distinguished by whether the graduates attended a private or public university
+
+```{r group-means-2}
+earnings |>
+  group_by(public) |>
+  summarize(
+    Salary_mn=mean(earn),
+    Salary_sd=sd(earn),
+    n=n())
+```
+The standard deviation of the salary in each group of college graduates is very similar so we can proceed with the T-test to determine if their means are different.
+
+
+```{r t-test 2}
+m3 <- t.test(
+  earn ~ public, 
+  data=earnings,
+  alternative="two.sided",
+  var.equal=TRUE)
+m3
+```
+
+
+
+```{r plot 2}
+earnings|>
+	ggplot(aes(sat, earn)) +
+	  geom_point() +
+	  xlab("SAT scores") +
+	  ylab("Salary After Graduation (USD)") +
+    geom_smooth(method="lm", se=FALSE) +
+    ggtitle("Plot produced by Leroy Wheeler on 2024-10-20")
+```
+
+
+```{r linear-regression 2}
+m4 <- lm(earn~sat, data=earnings)
+m4
+```
+
+```{r r-squared 2}
+glance(m4)$r.squared
+```
+
+
+```{r anova 2}
+anova(m4)
+```
+
+
+```{r plot 3}
+earnings|>
+	ggplot(aes(act, earn)) +
+	  geom_point() +
+	  xlab("ACT scores") +
+	  ylab("Salary After Graduation (USD)") +
+    geom_smooth(method="lm", se=FALSE) +
+    ggtitle("Plot produced by Leroy Wheeler on 2024-10-20")
+```
+
+
+
+```{r linear-regression 3}
+m5 <- lm(earn~act, data=earnings)
+m5
+```
+
+```{r r-squared 3}
+glance(m5)$r.squared
+```
+
+
+
+```{r anova 3}
+anova(m5)
+```
+
+
+```{r plot 4}
+earnings|>
+	ggplot(aes(sat, price)) +
+	  geom_point() +
+	  xlab("SAT scores") +
+	  ylab("Price of college degree (USD)") +
+    geom_smooth(method="lm", se=FALSE) +
+    ggtitle("Plot produced by Leroy Wheeler on 2024-10-25")
+```
+
+
+```{r linear-regression 4}
+m6 <- lm(earn~act, data=earnings)
+m6
+```
+
+```{r r-squared 4}
+glance(m6)$r.squared
+```
+
+```{r anova 4}
+anova(m6)
+```

@@ -1,0 +1,82 @@
+---
+title: "Analysis of postural sway data"
+author: "Steve Simon and Leroy Wheeler"
+format: 
+  html:
+    embed-resources: true
+date: 2024-10-09
+---
+
+This program reads data and runs a two-sample t-test. Consult the [data dictionary][dic] for information about the data itself.
+
+[dic]: https://github.com/pmean/data/blob/main/files/postural-sway.yaml
+
+## Libraries
+
+```{r setup}
+#| message: false
+#| warning: false
+library(broom)
+library(tidyverse)
+```
+
+## Read data
+
+```{r read-memory}
+sway <- read_tsv(
+  file="../data/postural-sway.txt",
+  col_types="cnn")
+names(sway) <- tolower(names(sway))
+glimpse(sway)
+```
+
+## Boxplot of sidesway by age
+
+```{r}
+#| fig.height: 1.5
+sway |>
+  ggplot(aes(age, sidesway)) +
+    geom_boxplot() +
+    ggtitle("Graph drawn by Leroy Wheeler on 2024-10-09") +
+    xlab("Treatment group") +
+    ylab("Side to side sway") +
+    coord_flip()
+```
+
+The elderly patients have generally higher side to side sway values. The elderly group also appear to have more variation which include two extreme outliers.
+
+## Descriptive statistics for sidesway
+
+```{r group-means}
+sway |>
+  group_by(age) |>
+  summarize(
+    sidesway_mn=mean(sidesway),
+    sidesway_sd=sd(sidesway),
+    n=n())
+```
+
+The average side-to-side sway is higher in the elderly patients. There is more variation in the elderly group, possibly caused by the two outliers.
+
+## Two-sample t-test
+
+```{r t-test}
+m1 <- t.test(
+  sidesway ~ age, 
+  data=sway,
+  alternative="two.sided",
+  var.equal=TRUE)
+m1
+```
+The 95% confidence interval includes the value of zero for the difference in the sample means of sidesway values. Further, the calculated p value is greater than our alpha which is set at 0.05. Therefore we conclude that there is not enough difference in the sample means to support rejecting the null hypothesis.
+
+
+## Equivalent analysis using linear regression
+
+```{r lm}
+m2 <- lm(sidesway ~ age, data=sway)
+tidy(m2)
+confint(m2)
+```
+Using a linear model, R program has given a value of zero to the elderly group and a value of one to the young group.  The y-intercept is equivalent to the mean sidesway of the elderly group and has a value of 22.2.  The young group mean value is determined by adding -7.09 to the elderly group mean and is equal to 15.1. The 95% confidence interval includes the possibility that the difference between the two means is zero so there is not enough difference between the two sample means to support rejecting the null hypothesis.  
+

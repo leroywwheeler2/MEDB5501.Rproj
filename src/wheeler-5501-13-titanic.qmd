@@ -1,0 +1,98 @@
+---
+title: "Analysis of Titanic dataset"
+format: 
+  html:
+    embed-resources: true
+---
+
+This program reads data on survival of passengers on the Titanic. Find more
+information in the [data dictionary][web00].
+
+[web00]: https://github.com/pmean/data/blob/main/files/titanic.yaml
+
+This code was written by Steve Simon and Leroy Wheeler on 2024-11-13 and is placed in the public
+domain.
+
+## Load the tidyverse library
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+library(broom)
+library(epitools)
+library(tidyverse)
+```
+
+
+## Read the data and view a brief summary
+
+```{r}
+#| label: read
+ti <- read_tsv(
+  file="../data/titanic.txt",
+  col_names=TRUE,
+  col_types="ccncn",
+  na="NA")
+names(ti) <- tolower(names(ti))
+glimpse(ti)
+```
+
+## Replace numeric codes for survived
+
+```{r}
+#| label: replace-numbers
+ti$survived <-
+	factor(
+		ti$survived,
+		level=1:0,
+		labels=c("yes", "no"))
+```
+
+
+## Question 1: Create a new variable, third_class that indicates whether a passenger is in third class or not.
+```{r}
+#| label: third_class
+ti$third_class <- 
+  case_when(
+    ti$pclass == "1st" ~ "no",
+    ti$pclass == "2nd" ~ "no",
+    ti$pclass == "3rd" ~ "yes")
+```
+
+## Question 2: What are the probabilities of survival for third class passengers. How does this compare to the probability of survival for the other passengers.
+
+## Get counts of third class passengers by survival
+
+```{r}
+#| label: counts
+table1 <-xtabs(~third_class+survived, data=ti)
+table1
+```
+## Get proportions for died/survived by third class status
+
+```{r}
+#| label: proportions
+table1 |>
+  proportions("third_class")
+```
+## Interpretation of the output for question 2.
+
+If you were a third class passenger, you had less than a 20% chance of survival, whereas if you were a first or second class passenger, you had more than a 50% chance of survival.
+
+## Question 3: Test the hypothesis that the survival probability is different for third class passengers and the other passengers. Interpret the p-value and confidence interval.
+
+```{r}
+#| label: equality-of-proportions
+prop.test(table1, correct=FALSE)
+```
+## Interpretation of the output for question 3. 
+
+The Chi-squared statistic is much larger than the degrees of freedom and the
+p-value is small. Therefore we will reject the null hypothesis and conclude that 
+there is a statistically significant difference in the mortality rates between
+the third class passengers and the 1st/2nd class passengers.
+The 95% confidence interval for the difference in proportions is 0.27 to 0.37.
+This interval excludes the value of zero and indicates that the mortality rate is
+at least 27% higher and possibly as much as 37% higher for third class passengers
+compared to the rest of the 1st/2nd class passengers.

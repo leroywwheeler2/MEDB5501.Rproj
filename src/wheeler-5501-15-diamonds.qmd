@@ -1,0 +1,189 @@
+---
+title: "Alternative analysis of postural sway data"
+format: 
+  html:
+    embed-resources: true
+execute:
+  error: true
+---
+
+This program runs some alternatives to the two-sample t-test. Consult the [data dictionary][dic] for information about the data itself.
+
+[dic]: https://github.com/pmean/data/blob/main/files/postural-sway.yaml
+
+This program was written by Steve Simon and Leroy Wheeler on 2024-10-16. It is placed in the public domain.
+
+
+## Libraries
+
+```{r setup}
+#| message: false
+#| warning: false
+library(tidyverse)
+```
+
+## Read data https://dasl.datadescription.com/datafile/diamonds/
+
+```{r read-diamonds}
+diamonds <- read_tsv(
+  file="../data/diamonds.txt",
+  col_types="nnccc")
+names(diamonds) <- tolower(names(diamonds))
+glimpse(diamonds)
+```
+
+## Boxplot of side to side sway by age
+
+```{r boxplot-1}
+#| fig.height: 2
+#| fig.width: 6
+diamonds |>
+  ggplot(aes(color, price)) +
+    geom_boxplot() +
+    ggtitle("Graph drawn by Leroy Wheeler on 2024-10-16") +
+    xlab("color") +
+    ylab("price")
+  
+```
+
+
+
+```{r boxplot-2}
+#| fig.height: 2
+#| fig.width: 6
+diamonds |>
+  ggplot(aes(clarity, price)) +
+    geom_boxplot() +
+    ggtitle("Graph drawn by Leroy Wheeler on 2024-10-16") +
+    xlab("clarity") +
+    ylab("price")
+```
+
+
+
+```{r boxplot-3}
+#| fig.height: 2
+#| fig.width: 6
+diamonds |>
+  ggplot(aes(cut, price)) +
+    geom_boxplot() +
+    ggtitle("Graph drawn by Leroy Wheeler on 2024-10-16") +
+    xlab("cut") +
+    ylab("price")
+```
+
+  
+
+## R plot of price by carat size
+```{r plot}
+diamonds|>
+	ggplot(aes(`carat size`, price)) +
+	  geom_point() +
+	  xlab("Carat Size") +
+	  ylab("Price (USD)") +
+    geom_smooth(method="lm", se=FALSE) +
+    ggtitle("Plot produced by Steve Simon on 2024-09-17")
+```
+## Descriptive statistics for side to side sway by age
+
+```{r group-means 1}
+diamonds |>
+  group_by(clarity) |>
+  summarize(
+    price_mn=mean(price),
+    price_sd=sd(price),
+    n=n())
+```
+
+```{r group-means 2}
+diamonds |>
+  group_by(color) |>
+  summarize(
+    price_mn=mean(price),
+    price_sd=sd(price),
+    n=n())
+```
+
+## Log transformation, 1
+
+```{r log-transform-1}
+sway |>
+  mutate(log_sidesway=log10(sidesway)) -> log_sway
+```
+
+## Log transformation, 2
+
+```{r log-transform-2}
+#| fig.height: 2
+#| fig.width: 6
+log_sway |>
+  ggplot(aes(age, log_sidesway)) +
+    geom_boxplot() +
+    ggtitle("Graph drawn by Leroy Wheeler on 2024-10-16") +
+    xlab("Treatment group") +
+    ylab("log side to side sway") +
+    coord_flip()
+```
+
+There are no outliers after a log transformation and the distribution of the data between the two groups looks more similar.
+
+## Log transformation, 3
+
+```{r compare-means-on-log-scale}
+log_sway |>
+  group_by(age) |>
+  summarize(
+    log_mn=mean(log_sidesway),
+    log_sd=sd(log_sidesway),
+    n=n())
+```
+
+The standard deviations on the log scale are more similar than they were on the original scale.
+
+## Question 1: The side-to-side sway data appears to have a pair of outliers and some evidence of heterogenity. Use a log transformation to see if this makes things better. Analyze the data on a log scale using a two-sample t-test and report the confidence interval after transforming back to the original scale of measurement.
+
+```{r t-test}
+m2 <- t.test(
+  log_sidesway ~ age, 
+  data=log_sway,
+  alternative="two.sided",
+  var.equal=TRUE)
+m2
+```
+
+There is a no statistically significant difference between the log side to side sway between elderly patients and young patients because the 95% confidence interval includes the possibility that the difference in the log means includes zero. This conclusion is further supported by the p value which is greater than our alpha of 0.05.
+
+## Back-transform confidence interval to the original scale.
+
+```{r back-transform}
+10^(m2$conf.int)
+```
+
+We are 95% confident that the geometric mean side to side sway in elderly patients is somewhere between 0.96 times higher (4% decrease) and 2.02 times higher (102% increase) than the geometric mean for young patients. Because our 95% CI includes the possibility that the elderly patient values are either smaller or larger than the younger patient values, we do not reject the null hypothesis that the side sway values in both data sets are equivalent.
+
+## Question 2: You want to replicate these findings in a new population, using the log transformation on the new data. Select a standard deviation from log transformed side-to-side sway values in the current study (go halfway between the two standard deviations). You want to have 90% power for detecting a 1.5 fold change (which is 0.176 units on a log base 10 scale). If you use a two-sided hypothesis with alpha = 0.05, what sample size would you need?
+
+
+```{r power-1}
+power.t.test(
+  n=NULL,
+  delta=0.176,
+  sd=0.14945,
+  sig.level=0.05,
+  power=0.9,
+  type="two.sample",
+  alternative="two.sided")
+```
+
+In order to detect a 1.5 fold (0.176 units on a log scale) change in side to side sway between the two groups with a 90% power and a two sided hypothesis with an alpha =0.05, we will need a sample size of at least 17.
+
+```{r power-2}
+power.t.test(
+  n=NULL,
+  delta=7.56,
+  sd=7.08,
+  sig.level=0.05,
+  power=0.9,
+  type="two.sample",
+  alternative="two.sided")
+```

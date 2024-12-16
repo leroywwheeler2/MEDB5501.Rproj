@@ -1,0 +1,95 @@
+---
+title: "Analysis of Titanic dataset Module 14"
+format: 
+  html:
+    embed-resources: true
+---
+
+This program reads data on survival of passengers on the Titanic. Find more
+information in the [data dictionary][dd].
+
+[dd]: https://github.com/pmean/data/blob/main/files/titanic.yaml
+
+This code was written by Steve Simon and Leroy Wheeler on 2024-11-19 and is placed in the public
+domain.
+
+## Load the tidyverse library
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+library(epitools)
+library(tidyverse)
+```
+
+## Read the data and view a brief summary
+
+```{r}
+#| label: read
+ti <- read_tsv(
+  file="../data/titanic.txt",
+  col_names=TRUE,
+  col_types="ccncn",
+  na="NA")
+names(ti) <- tolower(names(ti))
+glimpse(ti)
+```
+
+## Replace numeric codes for survived
+
+```{r}
+#| label: replace-numbers
+ti$survived <-
+	factor(
+		ti$survived,
+		level=1:0,
+		labels=c("yes", "no"))
+```
+
+## Question 1: Create a new variable, third_class that indicates whether a passenger is in third class or not. What is the odds ratio comparing survival between third class passengers and first/second class passengers? Interpret this odds ratio and the associated confidence interval.
+
+```{r}
+#| label: third_class
+ti$third_class <- 
+  case_when(
+    ti$pclass == "1st" ~ "no",
+    ti$pclass == "2nd" ~ "no",
+    ti$pclass == "3rd" ~ "yes")
+```
+
+
+## Get counts of sex by passenger class
+
+```{r}
+#| label: counts
+table1 <-xtabs(~third_class+survived, data=ti)
+table1
+```
+## Odds ratio calculation
+
+```{r}
+#| label: odds-ratio
+oddsratio(table1)
+```
+
+#### Interpretation of the odd ratio output
+
+We are 95% confident that the odds ratio of survival for 1st/2nd class passengers
+is at least 3.5 and possibly as large as 5.7, after accounting for sampling error. 
+This interval excludes the value of 1, so we conclude that the odds of 
+survival is 4.5 times higher for 1st and 2nd class passengers than for third class passengers.
+
+## Question 2: Calculate a chi-squared test of independence that examines the association between passenger class (third versus first/second) and mortality. Interpret the test result.
+
+```{r}
+#| label: chi-squared-test-1
+m1 <- chisq.test(table1, correct=FALSE)
+m1
+```
+
+#### Interpretation of the chi-square output
+
+Because the chi-squared statistic is much larger than the degrees of freedom and the
+p-value is small, we will reject the null hypothesis and conclude that passenger class status
+and survival are related (not independent)

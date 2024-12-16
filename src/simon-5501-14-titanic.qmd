@@ -1,0 +1,239 @@
+---
+title: "Analysis of Titanic dataset"
+format: 
+  html:
+    embed-resources: true
+---
+
+This program reads data on survival of passengers on the Titanic. Find more
+information in the [data dictionary][dd].
+
+[dd]: https://github.com/pmean/data/blob/main/files/titanic.yaml
+
+This code was written by Steve Simon on 2024-11-09 and is placed in the public
+domain.
+
+## Load the tidyverse library
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+library(epitools)
+library(tidyverse)
+```
+
+#### Comments on the code
+
+For most of your programs, you should load the [tidyverse library][tid1]. The 
+messages and warnings are suppressed.
+
+[tid1]: https://www.tidyverse.org/
+
+In previous programs, I put a label for each chunk inside the curly braces ({}).
+It is recommended instead to put the label on a separate line inside the program
+chunk. It is a bit more work to provide a unique label for each chunk, but it
+helps quite a bit to isolate where to look when your code produces an error.
+
+## Read the data and view a brief summary
+
+```{r}
+#| label: read
+ti <- read_tsv(
+  file="../data/titanic.txt",
+  col_names=TRUE,
+  col_types="ccncn",
+  na="NA")
+names(ti) <- tolower(names(ti))
+glimpse(ti)
+```
+
+#### Comments on the code
+
+Use read_tsv from the [readr package][rea1] to  read this file. Use 
+col_names=TRUE because the column names are included as the first row of the 
+file. The col_types="ccncn" specifies the first second and fourth columns as
+strings and the third and fifth as numeric. There are missing values in this
+dataset, designated by the letters "NA".
+
+[rea1]: https://readr.tidyverse.org/
+
+## Replace numeric codes for survived
+
+```{r}
+#| label: replace-numbers
+ti$survived <-
+	factor(
+		ti$survived,
+		level=1:0,
+		labels=c("yes", "no"))
+```
+
+## Get counts of sex by survival
+
+```{r}
+#| label: counts
+table1 <-xtabs(~sex+survived, data=ti)
+table1
+```
+
+#### Comments on the code
+
+The [table function][tab1] or the [xtabs function][xta1] creates a matrix with 
+the number of observations in each combination of sex and survived. These 
+values are placed in a single column. The [xtabs function][xta1] or the
+[count function][cou1] provide slightly different approaches.
+
+[cou1]: https://dplyr.tidyverse.org/reference/count.html
+[tab1]: https://stat.ethz.ch/R-manual/R-devel/library/base/html/table.html
+[xta1]: https://stat.ethz.ch/R-manual/R-devel/library/stats/html/xtabs.html
+
+#### Interpretation of the output
+
+There are 154 female passengers who died and 308 who survived. There are 709 
+male passengers who died and 142 who survived.
+
+## Chi-squared test, 1
+
+```{r}
+#| label: chi-squared-test-1
+m1 <- chisq.test(table1, correct=FALSE)
+m1
+```
+
+#### Comments on the code
+
+The [chisq.test function][chi1] calculates a chi-square test of independence. It
+takes input in a variety of forms. In this example, it uses a crosstabulation
+computed by the xtabs command as input.
+
+This function also will run a goodness-of-fit test, which is not discussed in 
+this lecture.
+
+[chi1]: https://stat.ethz.ch/R-manual/R-devel/library/stats/html/chisq.test.html
+
+#### Interpretation of the output
+
+The chi-squared statistic is much larger than the degrees of freedom and the
+p-value is small. You should reject the null hypothesis and conclude that sex
+and survival are related (not independent)
+
+## Chi-squared test, 2
+
+```{r}
+#| label: chi-squared-test-2
+m1$observed
+```
+
+## Chi-squared test, 3
+
+```{r}
+#| label: chi-squared-test-3
+m1$expected
+```
+
+## Fisher's Exact test
+
+```{r}
+#| label: fishers-exact
+fisher.test(table1)
+```
+
+#### Comments on the code
+
+The [fisher.test function][fis1] calculates the Fisher's exact test, which is
+helpful for small sample sizes. The 1,313 passengers on the Titanic do not
+constitute a small sample size by any means. This test is just shown as an 
+example of how to calculate this test. 
+
+[fis1]: https://stat.ethz.ch/R-manual/R-devel/library/stats/html/fisher.test.html
+
+#### Interpretation of the output
+
+The p-value is small. You should reject the null hypothesis and conclude that 
+sex and survival are related (not independent). The estimated odds ratio is 
+9.97. The confidence interval for the odds ratio excludes the value of 1 
+leading to the same conclusion. In fact, even after allowing for sampling error
+that odds of survival are at least 7.6 times greater for women than for me.
+
+## Odds ratio calculation
+
+```{r}
+#| label: odds-ratio
+oddsratio(table1)
+```
+
+#### Comments on the code
+
+The oddsratio function and riskratio function (see below) are part of the 
+[epitools library][epi1]. It produces an odds ratio and confidence interval 
+and p-values associated with the Fisher's Exact test and the Chi-squared test of
+independence.
+
+[epi1]: https://cran.r-project.org/web/packages/epitools/epitools.pdf
+
+#### Interpretation of the output
+
+We are 95% confident that the odds ratio of survival for women versus men is at
+least 7.7 and possibly as large as 13, after accounting for sampling error. 
+This interval excludes the value of 1, so you can conclude that the risk of 
+death is much higher for men than for women. Equivalently you could conclude 
+that the odds of survival are much higher for women than for men.
+
+## Risk ratio calculation, 1
+
+```{r}
+#| label: risk-ratio-1
+table1 |>
+  proportions("sex")
+```
+
+#### Interpretation of the output
+
+Before calculating the risk ratio, let's look at the row percentages one more 
+time. The probability of survival is around 2/3 for women and about 1/6 for men.
+This means that the risk ratio from a survival perspective is around 4 (2/3 
+divided by 1/6). The probability of death is 1/3 for females and about 5/6 for
+males. The risk ratio from a mortality perspective is 0.4 (1/3 divided by 5/6).
+
+## Risk ratio calculation, 2
+
+```{r}
+#| label: risk-ratio-2
+riskratio(table1)
+```
+
+#### Interpretation of the output
+
+The risk ratio is comparing the probability of death between men and women. Men 
+have 2.5 times higher probability of death compared to women. The confidence 
+interval excludes the value of 1, indicating a statistically significant 
+increase.
+
+## Risk ratio calculation, 3
+
+```{r}
+#| label: risk-ratio-3
+riskratio(table1, rev="columns")
+```
+
+#### Interpretation of the output
+
+The risk ratio is comparing the probability of survival between men and women. 
+Men has one-fourth the probability of survival compared to women. The confidence 
+interval excludes the value of 1, indicating that men have a statistically 
+significantly lower probability of survival compared to women. 
+
+## Save data for later use
+
+```{r save}
+save(ti, file="../data/titanic.RData")
+```
+
+#### Comments on the code
+
+It is usually a good idea to [save][sav1] your data in an RData file to make it
+easier to retrieve this data later (with the [load function][loa1]).
+
+[sav1]: https://stat.ethz.ch/R-manual/R-devel/library/base/html/save.html
+[loa1]: https://stat.ethz.ch/R-manual/R-devel/library/base/html/save.html

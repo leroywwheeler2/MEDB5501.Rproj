@@ -1,0 +1,115 @@
+---
+title: "Analysis of relationships in pulmonary data"
+format: 
+  html:
+    embed-resources: true
+editor: source
+---
+
+This program assesses the relationships among variables in a study of pulmonary function in children. There is a [data dictionary][dd] that provides more details about the data. The program was written by Steve Simon on 2024-09-07 and is placed in the public domain.
+
+[dd]: https://github.com/pmean/datasets/blob/master/fev.yaml
+
+## Libraries
+
+The tidyverse library is the only one you need for  this program.
+
+```{r setup}
+#| message: false
+#| warning: false
+library(tidyverse)
+```
+
+## List variable names
+
+Since the variable names are not listed in the data file itself, you need to list them here.
+
+```{r names}
+pulmonary_names <- c(
+    "age",
+    "fev",
+    "ht",
+    "sex",
+    "smoke")
+```
+
+## Reading the data
+
+Here is the code to read the data and show a glimpse. 
+
+```{r read}
+pulmonary <- read_csv(
+  file="../data/fev.csv",
+  col_names=pulmonary_names,
+  col_types="nnncc")
+glimpse(pulmonary)
+```
+
+## Question 1: Update the program to calculate descriptive statistics (mean, standard deviation, minimum, and maximum) for ht. Interpret these statistics.
+
+```{r descriptive-ht}
+summary(pulmonary$ht)
+sd(pulmonary$ht)
+```
+
+The mean height is about 61 inches with a standard deviation of almost 6 inches. Height ranges from 46 to 74 inches, which is consistent with a pediatric population.
+
+
+## Question 2: Draw a scatterplot of ht versus fev. Place ht on the x-axis and fev on the y-axis. Interpret this plot.
+
+
+```{r plot-ht-fev}
+pulmonary |>
+  ggplot(aes(ht, fev)) +
+    geom_point() +
+    geom_smooth() +
+    xlab("Height (inches)") +
+    ylab("Forced Expiratory Volume (Liters)") +
+    ggtitle("Scatter plot drawn by Leroy Wheeler on 2024-09-11")
+```
+
+There is a positive linear association between height and fev. Calculation of r will likely confirm this observation.
+
+
+
+## Question 3: Calculate the correlation between ht and fev. Interpret this correlation.
+```{r correlation}
+cor(pulmonary$ht, pulmonary$fev)
+```
+A correlation value of r=0.87 confirms the strong positive relationship between height and fev in this data set.
+
+## Question 4: Calculate counts and percentages for sex. Please be sure to convert sex from the numeric codes into a factor. Interpret these statistics.
+
+```{r descriptive-sex}
+pulmonary |>
+  count(sex) |>
+  mutate(total=sum(n)) |>
+  mutate(pct=round(100*n/total))
+```
+The data set was roughly split in half according to sex with 51% males and 49% females.
+
+## Question 5: Draw a boxplot for sex and fev. Interpret this boxplot
+```{r plot-sex-fev}
+pulmonary |>
+  ggplot(aes(sex, fev)) +
+    geom_boxplot() +
+    xlab("Sex (F/M)") +
+    ylab("Forced Expiratory Volume (Liters)") +
+    ggtitle("Box plot drawn by Leroy Wheeler on 2024-09-11")
+```
+
+The fev values are a little larger for males when compared to females.  The variability for the male data is also slightly higher as well. These results are not surprising.
+
+## Question 6: Calculate the difference in average fev values between males and females. Is this a large or a small difference? Calculate the effect size by dividing by the standard deviation of the females. Is this a small, medium, or large effect size?
+
+```{r mean-fev-by-sex}
+pulmonary |>
+  group_by(sex) |>
+  summarize(
+    mean_fev=mean(fev),
+    sd_fev=sd(fev))
+```
+
+The average fev values for males is 2.8 which is larger than that observed in females, which is 2.5. Males also have a standard deviation of 1, which is also higher than the standard deviation of 0.6 seen in females.
+
+The effect size between males and females is approximately 0.6 standard deviations.

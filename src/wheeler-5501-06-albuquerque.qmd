@@ -1,0 +1,243 @@
+---
+title: "Regression analysis and diagnostics for Albuquerque housing prices"
+author: "Steve Simon and Leroy Wheeler"
+format: 
+  html:
+    embed-resources: true
+date: 2024-08-18
+---
+
+This program reads data on housing prices in Albuquerque, New Mexico in 1993. Find more information in the [data dictionary][dd].
+
+[dd]: https://github.com/pmean/datasets/blob/master/albuquerque-housing.yaml
+
+This code is placed in the public domain.
+
+## Load the tidyverse library
+
+For most of your programs, you should load the tidyverse library. The broom package provides a nice way to compute residuals and predicted values. The messages and warnings are suppressed.
+
+```{r setup}
+#| message: false
+#| warning: false
+library(broom)
+library(tidyverse)
+```
+
+## Read the data and view a brief summary
+
+Use the read_csv function to read the data. The glimpse function will produce a brief summary.
+
+```{r read}
+alb <- read_csv(
+  file="../data/albuquerque-housing.csv",
+  col_names=TRUE,
+  col_types="nnnnccc",
+  na=".")
+glimpse(alb)
+```
+
+## m1: regression analysis using square feet to predict price
+
+You might expect that a house with more square feet would have a higher sales price. Your first steps are to compute simple descriptive statistics for both the independent variable (features) and the dependent variable (price). Then you should plot the data.
+
+## m1:  Question 1: Calculate descriptive statistics (mean, standard deviation, minimum, and maximum for sqft. Interpret these numbers
+
+```{r features-means}
+alb |>
+  summarise(
+    sqft_mn=mean(sqft, na.rm=TRUE),
+    sqft_sd=sd(sqft, na.rm=TRUE),
+    sqft_min=min(sqft, na.rm=TRUE),
+    sqft_max=max(sqft, na.rm=TRUE),
+    n_missing=sum(is.na(sqft)))
+```
+
+The average square footage of the homes in this data set are small compared to today's standards. The the standard deviation of 524 square feet indicates little variation.  There are no missing values in this data set of 117 houses.
+
+## m1: Calculate descriptive statistics for price
+
+```{r price-means}
+alb |>
+  summarize(
+    price_mn=mean(price, na.rm=TRUE),
+    price_sd=sd(price, na.rm=TRUE),
+    price_min=min(price, na.rm=TRUE),
+    price_max=max(price, na.rm=TRUE),
+    n_missing=sum(is.na(price)))
+```
+
+The average price is low 106,000 USD but the standard deviation 38,000 USD shows a fair amount of variation.
+
+## m1: Question 2: Draw a plot with price on the y-axis and sqft on the x-axis. Include a linear regression line, but do not extend it beyond the range of the data. Interpret this plot
+
+```{r scatterplot-1}
+alb |>
+  ggplot(aes(sqft, price)) +
+    geom_point() +
+    geom_smooth(method="lm", se=FALSE) +
+	  ggtitle("Plot drawn by Leroy Wheeler on 2024-09-25") +
+	  xlab("Square feet of living space") +
+	  ylab("Price of home in USD")+
+  expand_limits(x=0,y=0)
+```
+
+There is a strong positive relationship between the square feet of home and the listed price.
+
+## m1: Question 3: Calculate a linear regression model using sqft to predict price. Interpret the slope and intercept
+
+```{r regression-1}
+m1 <- lm(price~sqft, data=alb)
+m1
+```
+
+The estimated average sales price for a house with no living space (i.e. zero square feet) is about 4800 USD.  This value of the y-intercept is meaningless because I assume buyers will be only willing to pay for a home with some indoor living space, unless they are looking for an empty lot to build a house on. As seen from the slope of this linear model also predicts that the buyers will have to pay approximately 61 USD for each square foot of home. Compared to today's standards, this is pretty cheap. 
+
+## Skip some of the functions for hypothesis tests and p-values
+
+Normally, you would follow this up with various functions like anova(), confint(), or tidy(). This program skips those steps to focus on the diagnostic plots of the residuals.
+
+## m1: Calculate residuals and predicted values
+
+```{r residuals-1}
+r1 <- augment(m1)
+glimpse(r1)
+```
+
+You could have also used the resid() and predict() functions. No interpretation is needed here, as these numbers are better reviewed using various graphical displays.
+
+## m1: Question 4a: Draw a normal probability plot for the residuals (.resid). Interpret these plots.
+
+```{r qqplot-1}
+qqnorm(r1$.resid)
+```
+
+The normal probability plot reminds me of a straight line suggesting the residuals are normal, but I will be more convinced when I look at the histogram.
+
+Note that you cannnot use ggtitle, xlab, or ylab with the qqnorm function.
+
+## m1: Question 4b: Draw a histogram for the residuals (.resid). Interpret these plots.
+
+```{r histogram-1}
+r1 |>
+  ggplot(aes(.resid)) +
+    geom_histogram(
+      binwidth=10000,
+      color="black",
+      fill="white") +
+	  ggtitle("Plot drawn by Leroy Wheeler on 2024-09-25") +
+	  xlab("Residuals from m1")
+```
+
+The histogram of the residuals of square feet versus price looks normal so I will be happy with my linear regression model of square feet predicting the price of the homes.
+
+## m1: Question 5: Draw a scatterplot of sqft on the x-axis and the residuals on the y-axis. Is there evidence of non-linearity or heterogeneity?
+
+```{r residual-scatterplot-1}
+r1 |>
+  ggplot(aes(sqft, .resid)) + 
+    geom_point() +
+	  ggtitle("Plot drawn by Leroy Wheeler on 2024-09-25") +
+	  xlab("Square feet of living space") +
+	  ylab("Residuals from m1") 
+```
+
+There may be some heterogeneity where larger houses tend to exhibit more variation in their residuals. There is no evidence of non-linearity as a horizontal trend line can be drawn through the data.  There is one data point from the largest house that could be a problem.
+
+## m1: Question 6: Display the data (if any) for leverage values greater than 3*2/n. Describe where these leverage values are found relative to the independent and/or dependent variables.
+
+```{r leverage-1}
+n <- nrow(r1)
+r1 |> filter(.hat > 3*2/n)
+```
+
+There are four data points with high leverage, meaning more than 6/n. These correspond to the four houses with the largest square footage.  The house with the largest value of square foot actually has an observed price which is relatively far away from its predicted price value.
+
+## m1: Queston 7: Display the data (if any) for studentized deleted residuals (.std.resid) values greater than 3. Describe where these leverage values are found relative to the independent and/or dependent variables.
+
+```{r studentized-1}
+r1 |>
+  filter(abs(.std.resid) > 3)
+```
+
+There are two houses with a studentized deleted residual greater than 3.  The largest house has an observed price far below what the model would predict. This house was also one of the houses with a lot of leverage.  The second house with 2116 square feet had an observed price far above what the model would predict.
+
+## m1: Question 8: Display the data (if any) for Cook's distance (.cooksd) values greater than 1. Describe where these leverage values are found relative to the independent and/or dependent variables.
+
+```{r cook-1}
+r1 |>
+  filter(.cooksd > 1)
+```
+
+The largest house in the data set (3750 sqft) had a large value for Cook's distance. This single data point has unusually high influence on the predicted values.
+
+## m2: Because there are some concerns about non-normality and heterogeneity, you might consider using a log transformation for price. In this example, a base 10 logarithm is a reasonable choice.
+
+## m2: scatterplot
+
+```{r scatterplot-2}
+alb$log_price <- log10(alb$price)
+alb |>
+  ggplot(aes(sqft, log_price)) +
+    geom_point() +
+    geom_smooth(method="lm", se=FALSE) +
+	  ggtitle("Plot drawn by Leroy Wheeler on 2023-09-25") +
+	  xlab("Square feet of living space") +
+	  ylab("Log base 10 of price in dollars")
+```
+
+There is a strong positive linear relationship between log price and square feet of living space.
+
+## m2: Question 9a: Calculate the regression equation predicting log10 of price using sqft.
+
+```{r regression-2}
+m2 <- lm(log_price~sqft, data=alb)
+m2
+```
+
+The estimated average log price is 4.6 for a house with no living space.  This Y-intercept value is meaningless. The estimated average price increases by 0.00023 log for each additional square foot of living space. These numbers are easier to interpret when transformed back to the original scale.
+
+## m2: Question 9b: Transform the coefficients back to the original scale of measurement and interpret these values.
+
+```{r back-transform-2}
+10^(coef(m2))
+```
+
+The estimated average price is about 43,000 USD for a house with no living space, which is meaningless. The house will increase in price by 5% per additional 100 square feet, which is pretty cheap.
+
+## m2: Question 10: Calculate diagnostic plots (normal probability plot, histogram, and sqft versus residuals). Do these plots show that a model using log10 price better meets the assumptions for linear regression?
+
+```{r qqplot-2}
+r2 <- augment(m2)
+qqnorm(r2$.resid)
+```
+
+The normal probability plot of the residuals looks like a straight line, indicating a reasonably close fit to a normal distribution.
+
+## m2: Histogram of residuals
+
+```{r histogram-2}
+r2 |>
+  ggplot(aes(.resid)) +
+    geom_histogram(
+      binwidth=0.05,
+      color="black",
+      fill="white") +
+	  ggtitle("Plot drawn by Leroy Wheeler on 2024-09-26") +
+	  xlab("Residuals from m2")
+```
+
+The histogram of residuals also indicates a close fit to a normal distribution. The regression model using log price does a better job meeting the normality assumption.
+
+## m2: Plot residuals versus square feet
+
+```{r residual-scatterplot-2}
+r2 |>
+  ggplot(aes(sqft, .resid)) + 
+    geom_point() +
+	  ggtitle("Plot drawn by Leroy Wheeler on 2024-09-26") +
+	  xlab("Square feet of living space") +
+	  ylab("Residuals from m2")
+```
+
+Variation in the residuals seem to be independent of square feet, with no obvious increase or decrease as the square feet increases.  Overall performing the log transformation of the price before calculating the linear regression model may have improved the model a little bit.

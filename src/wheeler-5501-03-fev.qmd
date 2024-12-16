@@ -1,0 +1,99 @@
+---
+title: "Analysis of fev data"
+format: 
+  html:
+    embed-resources: true
+editor: source
+execute: 
+  error: true
+---
+
+This program assesses the normality of variables in a study of pulmonary function in children. There is a [data dictionary][dd] that provides more details about the data. The program was written by Steve Simon and Leroy Wheeler on 2024-09-04 and is placed in the public domain.
+
+[dd]: https://github.com/pmean/datasets/blob/master/fev.yaml
+
+## Libraries
+
+The tidyverse library is the only one you need for  this program.
+
+```{r setup}
+#| message: false
+#| warning: false
+library(tidyverse)
+```
+
+## List variable names
+
+Since the variable names are not listed in the data file itself, you need to list them here.
+
+```{r names}
+fev_names <- c(
+    "age",
+    "fev",
+    "ht",
+    "sex",
+    "smoke")
+```
+
+## Reading the data
+
+Here is the code to read the data and show a glimpse. 
+
+```{r read}
+fev <- read_csv(
+  file="../data/fev.csv",
+  col_names=fev_names,
+  col_types="nnncc")
+glimpse(fev)
+```
+
+## Calculate mean and standard deviation for ht
+
+To orient yourself to the data, calculate a few descriptive statistics.
+
+```{r descriptive-ht}
+fev |>
+  summarize(
+    ht_mean=mean(ht),
+    ht_stdv=sd(ht))
+```
+
+The mean ht is 61 inches and the standard deviation is 5.7 inches.
+
+## Histogram for ht, wide bars
+
+The geom_histogram function draws a histogram. You should specify values for color (which is the outline of individual bars) and fill (which is what is inside the bars). Also be careful with your choice of binwidth. Don't rely on the default choice.
+
+```{r histogram-ht-wide}
+ggplot(data=fev, aes(x=ht)) +
+  geom_histogram(
+    binwidth=3,
+    color="black",
+    fill="white")
+```
+
+See below for interpretation
+
+## Histogram for ht, narrow bars
+
+```{r histogram-ht-narrow}
+ggplot(data=fev, aes(x=ht)) +
+  geom_histogram(
+    binwidth=1,
+    color="black",
+    fill="white")
+```
+
+Both histograms which display the values of height in inches demonstrate an approximate normal distribution.
+
+## Normal probability plot for ht
+
+The qqnorm function produces a normal probability plot. The default option for most plots is landscape orientation (the width is larger than the height). The q-q plot, however, looks best if figure width and height are equal.
+
+```{r qqplot-ht}
+#| fig-width: 5
+#| fig.height: 5
+qqnorm(fev$ht)
+```
+
+The normal probability plot is pretty close to a straight line, suggesting the data is reasonably close to a normal distribution.

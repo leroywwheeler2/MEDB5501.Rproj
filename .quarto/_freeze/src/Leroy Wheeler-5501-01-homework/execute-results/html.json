@@ -1,0 +1,15 @@
+{
+  "hash": "cc3c094e2630139e9aa1f503579fdf32",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"5501-01 programming assignment\"\nauthor: \"Steve Simon and Leroy Wheeler\"\nformat: \n  html:\n    embed-resources: true\ndate: 2024-08-18\n---\n\n\nThis program reads data on housing prices in Albuquerque, New Mexico in 1993. Find more information in the [data dictionary][dd].\n\n[dd]: https://github.com/pmean/datasets/blob/master/albuquerque-housing.yaml\n\nThis code is placed in the public domain.\n\n## Load the tidyverse library\n\nFor most of your programs, you should load the tidyverse library. The messages and warnings are suppressed.\n\n\n::: {.cell}\n\n```{.r .cell-code}\nlibrary(tidyverse)\n```\n:::\n\n\n## Read the data and view a brief summary\n\nUse the read_csv function to read the data. The glimpse function will produce a brief summary.\n\n\n::: {.cell}\n\n```{.r .cell-code}\nalb <- read_csv(\n  file=\"../data/albuquerque-housing.csv\",\n  col_names=TRUE,\n  col_types=\"nnnnccc\",\n  na=\".\")\nglimpse(alb)\n```\n\n::: {.cell-output .cell-output-stdout}\n\n```\nRows: 117\nColumns: 7\n$ price        <dbl> 205000, 208000, 215000, 215000, 199900, 190000, 180000, 1…\n$ sqft         <dbl> 2650, 2600, 2664, 2921, 2580, 2580, 2774, 1920, 2150, 171…\n$ age          <dbl> 13, NA, 6, 3, 4, 4, 2, 1, NA, 1, 4, 8, 15, 14, 18, NA, 16…\n$ features     <dbl> 7, 4, 5, 6, 4, 4, 4, 5, 4, 3, 5, 6, 3, 5, 8, 3, 4, 3, 4, …\n$ northeast    <chr> \"yes\", \"yes\", \"yes\", \"yes\", \"yes\", \"yes\", \"yes\", \"yes\", \"…\n$ custom_build <chr> \"yes\", \"yes\", \"yes\", \"yes\", \"yes\", \"no\", \"no\", \"yes\", \"no…\n$ corner_lot   <chr> \"no\", \"no\", \"no\", \"no\", \"no\", \"no\", \"no\", \"no\", \"no\", \"no…\n```\n\n\n:::\n:::\n\n\n## Calculate overall means\n\nThe summarize_if function produces means, but only for numeric data. You wouldn't want to compute means for data with values \"yes\" and \"no\".\n\n\n::: {.cell}\n\n```{.r .cell-code}\nalb |>\n  summarise_if(is.numeric, mean, na.rm = TRUE)\n```\n\n::: {.cell-output .cell-output-stdout}\n\n```\n# A tibble: 1 × 4\n    price  sqft   age features\n    <dbl> <dbl> <dbl>    <dbl>\n1 106274. 1654.  15.0     3.53\n```\n\n\n:::\n:::\n\n\n## Summarize price\n\nThe average price of a home, 106 thousand dollars, is quite low because the data comes from 1993.\n\n## Summarize sqft\n\nThe average size of a house is about 1,600 square feet, which is small by today's standards.\n\n## Summarize age\n\nThe average age of a home was 15 years, which is a relatively new house.\n\n## Summarize features\n\nThe average number of features is 3.5, which is low.",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

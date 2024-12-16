@@ -1,0 +1,15 @@
+{
+  "hash": "0d18a2bb08eaf894cd579b154b01cc1a",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"Counts and percentages\"\nformat: \n  html:\n    slide-number: true\n    embed-resources: true\neditor: source\nexecute:\n  echo: true\n  message: false\n  warning: false\n---\n\n\n## Data source\n\nThis program uses data from a study of sharing services (like sharing an automobile) and produces counts and percentages for a few demographic variables. There is a [data dictionary][dd] that provides more details about the data. \n\n[dd]: https://github.com/pmean/datasets/blob/master/sharing.yaml\n\n## Libraries\n\nHere are the libraries you need for this program.\n\n\n::: {.cell}\n\n```{.r .cell-code}\nlibrary(readxl)\nlibrary(tidyverse)\n```\n:::\n\n\n## Reading the data\n\nHere is the code to read the data and show a glimpse. There are 31 columns total, but I am showing just a few of the columns here.\n\n\n::: {.cell}\n\n```{.r .cell-code}\nfn <- \"../data/sharing.xlsx\"\nsharing <- read_excel(fn)\nglimpse(sharing[ , c(1, 5:7)])\n```\n\n::: {.cell-output .cell-output-stdout}\n\n```\nRows: 190\nColumns: 4\n$ id                <dbl> 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1…\n$ age               <chr> \"36-45\", \"36-45\", \"over 60\", \"46-60\", \"36-45\", \"over…\n$ gender            <chr> \"M\", \"F\", \"F\", \"M\", \"F\", \"F\", \"F\", \"F\", \"F\", \"F\", \"F…\n$ employment_status <chr> \"employed\", \"employed\", \"employed\", \"employed\", \"emp…\n```\n\n\n:::\n:::\n\n\n## Calculate counts and percentages for age group\n\n\n::: {.cell}\n\n```{.r .cell-code}\nsharing |>\n  group_by(age) |>\n  summarize(n=n()) |>\n  mutate(total=sum(n)) |>\n  mutate(pct=100*n/total)\n```\n\n::: {.cell-output .cell-output-stdout}\n\n```\n# A tibble: 6 × 4\n  age         n total   pct\n  <chr>   <int> <int> <dbl>\n1 18-25      99   190 52.1 \n2 26-35      33   190 17.4 \n3 36-45      27   190 14.2 \n4 46-60      19   190 10   \n5 over 60     6   190  3.16\n6 <NA>        6   190  3.16\n```\n\n\n:::\n:::\n\n\nThe survey respondents were younger than the general population. About half of the survey respondents were 18 to 25 years old. Only 3% were over 60. Six ages were missing.",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

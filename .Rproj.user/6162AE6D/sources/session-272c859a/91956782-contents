@@ -1,0 +1,131 @@
+---
+title: "Analysis of breast feeding study"
+author: "Steve Simon and Leroy Wheeler"
+format: 
+  html:
+    embed-resources: true
+date: 2024-09-18
+---
+
+This program reads data and fits various linear regression models on a breast feeding study in pre-term infants.  Find more information in the [data dictionary][dd]. This code is placed in the public domain.
+
+[dd]: https://raw.githubusercontent.com/pmean/datasets/master/breast-feeding-preterm.yaml
+
+## Load the tidyverse library
+
+For most of your programs, you should load the tidyverse library. The messages and warnings are suppressed.
+
+```{r setup}
+#| message: false
+#| warning: false
+library(broom)
+library(tidyverse)
+```
+
+## Read the data and view a brief summary
+
+Use the read_csv function to read the data. With a large number of variables, you may choose to leave the col_types out.R will usually figure out which variables are numeric and which are strings.
+
+Replace all the numeric codes of -1 with the missing value code (NA).
+
+```{r read}
+bf <- read_csv(
+  file="../data/breast-feeding-preterm.csv",
+  col_names=TRUE)
+glimpse(bf)
+```
+
+## Convert -1 to NA
+
+The code below only works because every single variable in the dataset is non-negative.
+
+```{r convert-missing}
+bf[bf==-1] <- NA
+```
+
+## Question 1: Calculate descriptive statistics for gestational age (mean, standard deviation, minimum, and maximum) and count the number of missing values. Interpret these results.
+
+```{r gest-age}
+bf |>
+	summarize(
+		mean_gest_age=mean(gest_age, na.rm=TRUE),
+		sd_gest_age=sd(gest_age, na.rm=TRUE),
+		min_gest_age=min(gest_age, na.rm=TRUE),
+		max_gest_age=max(gest_age, na.rm=TRUE),
+		n_missing=sum(is.na(gest_age))) |>
+	data.frame()
+```
+
+This is a reasonable distribution of infants who are born early. The youngest pre-term infant was 26 weeks old with the oldest pre-term infant being 35 weeks of age.  There are no missing data for this variable in this data set.
+
+## Question 2: Calculate descriptive statistics for age at discharge from the hospital and count the number of missing values. Interpet these results.
+
+```{r dc-age}
+bf |>
+	summarize(
+		mean_dc_age=mean(dc_age, na.rm=TRUE),
+		sd_dc_age=sd(dc_age, na.rm=TRUE),
+		min_dc_age=min(dc_age, na.rm=TRUE),
+		max_dc_age=max(dc_age, na.rm=TRUE),
+		n_missing=sum(is.na(dc_age))) |>
+	data.frame()
+```
+The average age of the infants discharged from the hospital was about 34 days, with a minimum value of 8 days and a maximum value of 77 days. These are expected values as infants who are pre-term often have to remain in the hospital after they are born. There are no missing values for this variable in this data set.
+
+
+## Question 3: Pre-term infants spend a longer amount of time in the hospital than full-term infants. In fact, the earlier the baby appears, the longer the amount of time that the infant remains in the birth hospital. Draw a scatterplot to examine whether this pattern holds in this dataset. Consider age at discharge to be the outcome variable when deciding how to draw this scatterplot. Use the geom_smooth function to graph the regression line, but do not extend the line beyond the range of the data.
+
+```{r plot}
+bf |>
+	ggplot(aes(gest_age, dc_age)) +
+	  geom_point() +
+	  xlab("Estimated gestational age (weeks)") +
+	  ylab("Age at discharge (days)") +
+    geom_smooth(method="lm", se=FALSE) +
+    ggtitle("Plot produced by Leroy Wheeler on 2024-09-18")
+```
+
+Our data set here is consistent with previous observations that infants with a younger estimated gestational age at birth must spend more time in the hospital before being discharged.  
+
+
+## Question 4: Use the lm function to compute the slope and intercept for the regression model predicting age at discharge using gestational age. Interpret both the slope and the intercept and state whether the intercept represents an inappropriate extrapoloation.
+
+
+```{r linear-regression}
+m1 <- lm(dc_age~gest_age, data=bf)
+m1
+```
+We can see from the slope of the regression model, for every week early that the infant is born, she has to spend an additional 7.5 days in the hospital before being discharge.  The y-intercept is well out of the range of data because no infants will be able to survive outside the womb at a gestational age of zero.  The y-intercept is therefore meaningless.
+
+## Question 5: Calculate an analysis of variance table for this regression model. Interpret the F ratio and the p-value. What hypothesis do these two statistics test?
+
+```{r anova}
+anova(m1)
+```
+
+The F-ratio is very large and the p-value is extremely small, so we will reject the null hypothesis and conclude that there is strong evidence for a linear relationship between gestational age of the infant and age of the infant at discharge from the hospital.
+
+
+## Question 6: Calculate R squared for this regression model. Interpret this value. R-squared for dc_age.
+
+```{r r-squared}
+glance(m1)$r.squared
+```
+
+We see that approximately 78% of the extra time remaining in the hospital is due to the gestational age of the infant at birth.  Therefore we conclude that the inverse relationship observed when we graph gestation age of the infant vs the age of the infant at discharge is strong.
+
+## Question 7: Compute a confidence interval for the slope parameter. Interpret this interval. Characterize the interval as either narrow or wide.
+
+```{r ci-dc_age}
+confint(m1)
+```
+
+The 95% confidence interval includes only negative values consistent with the inverse relationship between gestational age at birth and time remaining in the hospital after birth.  We are therefore 95% confident that the time spent in the hospital after birth decreases somewhere between 6.6 and 8.4 days for every additional gestational week of age that the infant has at the time of birth. The slope of the regression line has a narrow range between -6.6 days and -8.4 days spent in the hospital per an additional week of gestational age at birth.
+
+## Alternate test for the slope parameter
+
+```{r t-test-for-gest_age}
+tidy(m1)
+```
+
+The T statistic is testing the slope parameter is large and the p-value is small, both indicating that you should reject the null hypothesis and conclude that there is a negative relationship the infants gestational age and its age at the time of discharge from the hospital.

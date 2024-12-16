@@ -1,0 +1,288 @@
+---
+title: "Linear regression modules using the breast feed dataset"
+author: "Steve Simon and Leroy Wheeler"
+format: 
+  html:
+    embed-resources: true
+date: 2024-10-03
+---
+
+This program reads data and fits various linear regression models on a breast feeding study in pre-term infants.  Find more information in the [data dictionary][dd]. This code is placed in the public domain.
+
+[dd]: https://raw.githubusercontent.com/pmean/datasets/master/breast-feeding-preterm.yaml
+
+## Libraries
+
+You should always load the tidyverse library. The broom library provides the glance, tidy, and augment functions that help you with computations of linear regression models. The car library provides the vif function for measuring collinearity.
+
+```{r setup}
+#| message: false
+#| warning: false
+library(broom)
+library(car)
+library(tidyverse)
+```
+
+
+## Question 1: Change the program so that it reads in the breast-feeding-preterm.csv file. Show a glimpse of the data and verify that you have properly read in all 82 rows and 31 columns. No intepretation is necessary for this question
+
+Use the read_csv function to read the data. With a large number of variables, you may choose to leave the col_types out.R will usually figure out which variables are numeric and which are strings.
+
+Replace all the numeric codes of -1 with the missing value code (NA).
+
+```{r read}
+bf <- read_csv(
+  file="../data/breast-feeding-preterm.csv",
+  col_names=TRUE)
+glimpse(bf)
+```
+## Convert -1 to NA
+
+The code below only works because every single variable in the dataset is non-negative.
+
+```{r convert-missing}
+bf[bf==-1] <- NA
+```
+
+## Question 2: Compute descriptive statistics (counts and percentages) for feed_type. Interpret these values.
+
+```{r feed_type-1}
+bf |>
+	count(feed_type) |>
+	mutate(total=sum(n)) |>
+	mutate(pct=100*n/total)
+```
+There were similar numbers of each participants in the group in the study.  The control group were infants who were bottle fed while the treatment group were infants who were fed using an NG tube.
+
+
+## Question 3: Compute descriptive statistics (mean, standard deviation, minimum, and maximum) for age_stop. Interpret these values.
+
+```{r age_stop}
+bf |>
+	summarize(
+		mean_age_stop=mean(age_stop, na.rm=TRUE),
+		sd_age_stop=sd(age_stop, na.rm=TRUE),
+		min_age_stop=min(age_stop, na.rm=TRUE),
+		max_age_stop=max(age_stop, na.rm=TRUE),
+		n_missing=sum(is.na(age_stop))) |>
+	data.frame()
+```
+The mean age at which all infants stopped breast feeding was about 17 weeks, with a standard deviation of 10 weeks.  The min was one week and the max was 34 weeks.  There were two missing values in the data set.
+
+
+## Question 4: Draw a boxplot comparing age_stop for each level of feed_type. Interpret this plot.
+
+```{r box plot age_stop to feed_type}
+bf |>
+  ggplot(aes(age_stop, feed_type)) +
+    geom_boxplot() + 
+    coord_flip() +
+    ggtitle("Graph drawn by Leroy Wheeler on 2024-10-03") +
+	  xlab("Age infant stopped breast feeding (weeks)") +
+	  ylab("Feeding Group")
+```
+Infants in the treatment group who were fed through an NG tube continued to breast feed significantly longer than the control group of infants who were bottle fed.
+
+## Question 5: Calculate the means and standard deviations for each level of feed_type. Interpret these numbers
+
+```{r feed_type}
+bf |>
+  group_by(feed_type) |>
+	summarize(
+		age_stop_mn=mean(age_stop, na.rm=TRUE),
+		age_stop_sd=sd(age_stop, na.rm=TRUE))
+```
+Infants in the treatment group who were fed through an NG tube continued to breast feed for an average of 20 weeks while the control group of infants who were bottle fed continued to breast feed for an average of 13 weeks.
+		
+## Question 6: Compute a linear regression model predicting age_stop using feed_type. What value does R assign to 0 and what value does R assign to 1? Interpret the slope and intercept for this linear regression model.
+
+```{r m1-model}
+m1 <- lm(age_stop ~ feed_type, data=bf)
+m1
+```
+R has assigned the value 0 to the control group and a value of 1 to the treatment group.  From the linear regression equation we see that on average the control group of infants stopped breast feeding at 13 weeks while the treatment group continued to breast feed for 7 weeks longer.
+
+## Question 7: Compute R-squared for this regression model. Interpret this number.
+
+```{r m1-r-squared}
+glance(m1)$r.squared
+```
+The R squared value for our linear regression model is 0.12 which means that only about 12% of the variation in breast feeding time can be explained by the NG tube feeding.  Feeding type is therefore a weak predictor of breast feeding time.
+
+
+
+## Question 8: Draw a normal probability plot and a histogram for the residuals from this regression model. Is the assumption of normality satisfied?
+
+```{r m1-qq-plot}
+r1 <- augment(m1)
+r1 |>
+	ggplot(aes(sample=.resid)) +
+	  stat_qq() +
+    ggtitle("Graph drawn by Leroy Wheeler on 2024-10-03")
+```
+
+The qq plot does not show a straight line suggesting that that the residuals are NOT normally distributed.  This violates our assumptions so we might have to use a different model.
+
+## Question 8b: Histogram of residuals
+
+```{r m1-histogram}
+r1 |>
+	ggplot(aes(.resid)) +
+	  geom_histogram(
+	  	binwidth=2,
+	  	color="black",
+	  	fill="white") +
+    ggtitle("Graph drawn by Leroy Wheeler on 2024-10-03") +
+	  xlab("Residuals from m1 regression model")
+```
+
+The histogram clearly shows that the residuals in our linear regression model are NOT normally distributed.
+
+
+## Question 9a: Calculate descriptive statistics (mean, standard deviation, minimum, and maximum) for mom_age. Interpret these values.
+
+```{r mom_age}
+bf |>
+	summarize(
+		mean_mom_age=mean(mom_age, na.rm=TRUE),
+		sd_mom_age=sd(mom_age, na.rm=TRUE),
+		min_mom_age=min(mom_age, na.rm=TRUE),
+		max_mom_age=max(mom_age, na.rm=TRUE),
+		n_missing=sum(is.na(mom_age))) |>
+	data.frame()
+```
+The mean age of the mothers participating in this study is about 27 years with a standard deviation of about 6 and a half.  The youngest participant is 16yrs and the oldest participant is 44 yrs old.  There are no missing values of mothers age in this data set.
+
+
+## Question 9b: Calculate descriptive statistics (mean, standard deviation, minimum, and maximum) for para. Interpret these values.
+
+```{r para}
+bf |>
+	summarize(
+		mean_para=mean(para, na.rm=TRUE),
+		sd_para=sd(para, na.rm=TRUE),
+		min_para=min(para, na.rm=TRUE),
+		max_para=max(para, na.rm=TRUE),
+		n_missing=sum(is.na(para))) |>
+	data.frame()
+```
+Para stands for parity or in other words the number of live births that each mother have had.  The mean parity for the participants is about 2 live births, with a standard deviation of 1 live birth.  The minimum number of live births for these mothers is one while the maximum number is 5.  There are no missing values in this data set for parity.
+
+## Question 10: Calculate the correlations between mom_age, para, and age_stop. Interpret these values.
+
+
+```{r corr}
+bf |>
+  select(mom_age, para, age_stop) |> 
+  cor(use='complete.obs')
+```
+There is a weak correlation between the mothers age and breast feeding time (0.25).
+There is virtually zero correlation between parity and breast feeding time (0.02).
+
+
+## Question 11a: Draw a scatterplot with mom_age on the x-axis and age_stop on the y-axis. Interpret these plots.
+
+```{r plot}
+bf |>
+	ggplot(aes(mom_age, age_stop)) +
+	  geom_point() +
+	  xlab("Mother's age (years)") +
+	  ylab("When breast feeding ended (weeks)") +
+    geom_smooth(method="lm", se=FALSE) +
+    ggtitle("Plot produced by Leroy Wheeler on 2024-10-03")
+```
+It looks like there is a positive trend where older mothers tend to breast feed their infants longer.
+
+## Question 11b: Draw a scatterplot with para on the x-axis and age_stop on the y-axis. Interpret these plots.
+
+```{r plot-2}
+bf |>
+	ggplot(aes(para, age_stop)) +
+	  geom_point() +
+	  xlab("Parity (Number of live births)") +
+	  ylab("When breast feeding ended (weeks)") +
+    geom_smooth(method="lm", se=FALSE) +
+    ggtitle("Plot produced by Leroy Wheeler on 2024-10-03")
+```
+There seems to be a very weak relationship between parity and the length of time the infants continued to breast feed.
+
+## Question 12: Compute a linear regression model using mom_age and para to predict age_stop. Interpret the regression coefficients.
+
+```{r m2}
+m2 <- lm(age_stop ~ mom_age + para, data=bf)
+m2
+```
+
+With parity held constant, for every year older the mother was, the infant was breast fed for about half a week longer.  With the age of the mother held constant, for every additional child the mother gave birth to, there was one less week that the new infant was breast fed.
+
+## Question 13: Compute R-squared for this regression model. Interpret this number.
+```{r m2-r-squared}
+glance(m2)$r.squared
+```
+The R squared value was 0.076 which means only about 8% of the total breast feeding time can be explained by a combination of the mothers age and her parity.
+
+## Question 14: Draw a normal probability plot and a histogram of the residuals. Interpret these plots.
+
+```{r m2-qq-plot}
+r2 <- augment(m2)
+r2 |>
+	ggplot(aes(sample=.resid)) +
+	  stat_qq() +
+    ggtitle("Graph drawn by Leroy Wheeler on 2024-10-03") 
+```
+
+The qq plot testing for normality of the residuals do not show a linear relationship, therefore the assumption of residual normality is not satisfied.  We may need to use a different model.
+
+```{r m2-histogram}
+r2 |>
+	ggplot(aes(.resid)) +
+	  geom_histogram(
+	  	binwidth=2,
+	  	color="black",
+	  	fill="white") +
+    ggtitle("Graph drawn by Leroy Wheeler on 2024-10-03") +
+	  xlab("Residuals from m2 regression model")
+```
+
+The histogram of the residuals from our linear regression model confirms that the residuals from the model do not show a normal distribution.
+
+## Question 15: Draw a plot with the predicted values on the x-axis and the residuals on the y-axis. Is there any evidence of heterogeneity or non-linearity?
+
+```{r diagnostic-2}
+r2 |>
+  ggplot(aes(.fitted, .resid)) +
+    geom_point() +
+    xlab("Predicted values breast feeding time (weeks))") +
+    ylab("Residuals from regression") +
+    ggtitle("Graph drawn by Leroy Wheeler on 2024-10-03")
+```
+The residuals from this model look pretty homogeneous and linear along the x-axis.
+
+
+## Question 16: Display any extreme values for leverage (greater than 3*3/n), studentized deleted residuals (absolute value greater than 3), and for Cook's distance (greater than 1). Explain why these values are extreme.
+
+## Leverage
+
+```{r influence-1}
+n <- nrow(r2)
+r2 |> filter(.hat > 3*3/n)
+```
+The mother from row 50 has a combined value of parity plus mothers age which we may want to investigate.
+
+## Studentized deleted residuals
+
+
+```{r influence-2}
+r2 |> 
+  filter(abs(.std.resid) > 3)
+```
+There are no predicted values of weeks breast fed that are beyond 3 standard deviations.
+
+## Cook's test for infulential data points
+
+```{r influence-3}
+r2 |> 
+  filter(.cooksd > 1)
+```
+
+There are no specific observations from the data set which exert an out-sized influence on our model.

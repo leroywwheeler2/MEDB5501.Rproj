@@ -1,0 +1,15 @@
+{
+  "hash": "34eeda1c8570ee212eb7e005d2a506ff",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"Sample size justification for postural sway study\"\nformat: \n  html:\n    embed-resources: true\neditor: source\n---\n\n\n\nThis program evaluates various sample size calculations for a proposed replication of the postural-sway study in a different population. It was written by Steve Simon on 2024-10-08 and is placed in the public domain.\n\n## Scenario 1\n\n-   Replicate postural sway study\n    -   Different populations\n    -   Same outcome measure\n-   Research hypothesis, $H_0\\ \\mu_1 - \\mu_2 = 0$\n-   Standard deviations: 9.77, 4.09\n-   MCID = 4\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\npower.t.test(\n  n=NULL,\n  delta=4,\n  sd=9.8,\n  sig.level=0.05,\n  power=0.9,\n  type=\"two.sample\",\n  alternative=\"two.sided\")\n```\n\n::: {.cell-output .cell-output-stdout}\n\n```\n\n     Two-sample t test power calculation \n\n              n = 127.1097\n          delta = 4\n             sd = 9.8\n      sig.level = 0.05\n          power = 0.9\n    alternative = two.sided\n\nNOTE: n is number in *each* group\n```\n\n\n:::\n:::\n\n\n\nWith a sample of 128 patients, we would have 90% power for detecting a 4 unit difference in postural sway, using a two-sided test at an alpha level of 0.05.\n\n## Scenario 2, MCID = 2\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\npower.t.test(\n  n=NULL,\n  delta=2,\n  sd=9.8,\n  sig.level=0.05,\n  power=0.9,\n  type=\"two.sample\",\n  alternative=\"two.sided\")\n```\n\n::: {.cell-output .cell-output-stdout}\n\n```\n\n     Two-sample t test power calculation \n\n              n = 505.5288\n          delta = 2\n             sd = 9.8\n      sig.level = 0.05\n          power = 0.9\n    alternative = two.sided\n\nNOTE: n is number in *each* group\n```\n\n\n:::\n:::\n\n\n\nIf we wanted to be able to detect a 2 unit difference, we would need a sample size that is about four times as large.\n    \n## Scenario 3, MCID=8\n\n## Scenario 4, sd=4.9\n\n## Scenario 5, sd=19.6\n\n## Scenario 6, alpha=0.01\n\n## Scenario 7, alpha=0.10\n\n## Scenario 8, power=0.8\n\n## Scenario 9, power=0.95\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}
